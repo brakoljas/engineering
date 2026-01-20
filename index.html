@@ -75,7 +75,7 @@
 </header>
 
 <main>
-  <!-- LEFT: SETTINGS + INVENTORY + IO -->
+  <!-- LEFT -->
   <section class="card">
     <h2>Параметры персонажа</h2>
     <div class="row">
@@ -94,8 +94,8 @@
       </select>
     </div>
     <div class="muted">
-      Проверка в игре: d20 + бонус инструментов против СЛ = требуемому Интеллекту устройства.
-      В режиме “Новый прототип” кнопка на встроенных чертежах запускает “Скрафтить прототип”: копия в пользовательский каталог + редактирование.
+      Проверка в игре: d20 + бонус инструментов против СЛ = требуемому Интеллекту устройства.<br>
+      В режиме “Новый прототип” на встроенных чертежах кнопка “Скрафтить прототип” создаёт копию → открывает редактирование → после сохранения прототип автоматически показывается в списке.
     </div>
 
     <div class="hr"></div>
@@ -117,6 +117,20 @@
     </div>
     <textarea id="ioBox" rows="7" placeholder="Здесь появится экспорт или сюда вставь импорт JSON..."></textarea>
 
+<div class="hr"></div>
+
+<h2>Импорт каталога из текста</h2>
+<div class="muted">
+  Вставь текст из wiki (как в сообщении). Будет распознано: категория → подкатегория → предмет → сложность → описание → материалы.
+  Импорт добавит/обновит пользовательские чертежи.
+</div>
+<div class="btnrow" style="margin-top:10px;">
+  <button id="importCatalogBtn">Импортировать каталог</button>
+</div>
+<textarea id="catalogText" rows="10" placeholder="Вставь сюда каталог из wiki..."></textarea>
+<div class="muted" id="importCatalogResult" style="margin-top:8px;"></div>
+
+
     <div class="hr"></div>
 
     <h2>История крафта</h2>
@@ -126,7 +140,7 @@
     </div>
   </section>
 
-  <!-- RIGHT: FILTERS + ITEMS -->
+  <!-- RIGHT -->
   <section class="card">
     <h2>Устройства и крафт</h2>
 
@@ -178,13 +192,12 @@
   </section>
 </main>
 
-<!-- MODAL: add/edit item -->
+<!-- MODAL -->
 <div id="modalBackdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1000;"></div>
 
 <div id="itemModal" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
   width:min(860px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
   overflow:auto; z-index:1001;">
-
   <div class="card" style="padding:14px;">
     <div style="display:flex; justify-content:space-between; gap:10px; align-items:start;">
       <div>
@@ -258,7 +271,7 @@
 
 <script>
 /** =========================
- *  ДАННЫЕ: материалы и устройства
+ *  CONFIG
  *  ========================= */
 const DIFFICULTY_TO_INT = {
   "Простая": 12,
@@ -268,7 +281,6 @@ const DIFFICULTY_TO_INT = {
   "Гениальная": 20,
 };
 
-// Базовый набор материалов (можно расширять через UI)
 const DEFAULT_INVENTORY = {
   "Металл": 0,
   "Древесина": 0,
@@ -286,19 +298,22 @@ const DEFAULT_INVENTORY = {
   "Ядовитые реактивы": 0,
 };
 
-/**
- * Встроенный каталог (пример).
- * Добавь сюда весь свой “каноничный” список — а пользовательские чертежи хранятся отдельно (customCatalog).
- */
+/** =========================
+ *  BUILTIN CATALOG
+ *  ========================= */
 const CATALOG = [
-  // Одежда / Головные уборы
+  // =========================
+  // ОДЕЖДА
+  // =========================
+
+  // Головные уборы
   {
     id: "photochromic_glasses",
     name: "Фотохромные очки",
     category: "Одежда / Головные уборы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "+1 к Внимательности (зрение) в солнечную и пасмурную погоду.",
+    text: "Оправа с линзами, меняющими затемнение по погоде. +1 к Внимательности (Perception), основанной на зрении, в солнечную и пасмурную погоду.",
     materials: { "Металл": 4, "Стекло": 6, "Световые реактивы": 5 },
   },
   {
@@ -307,29 +322,58 @@ const CATALOG = [
     category: "Одежда / Головные уборы",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "+1 к попаданию дальнобойными атаками.",
+    text: "Очки с линзами и прицельной сеткой из самоцветов. Пока надеты: +1 к попаданию дальнобойными атаками.",
     materials: { "Кожа/Текстиль": 5, "Металл": 5, "Стекло": 10, "Самоцветы": 15 },
   },
 
-  // Одежда / Обувь
+  // Перчатки и наручи
+  {
+    id: "climbing_claws",
+    name: "Альпинистские когти-лазы",
+    category: "Одежда / Перчатки и наручи",
+    difficulty: "Обычная",
+    reqInt: 14,
+    text: "Перчатки с крюками и шипами. Пока надеты: преимущество на Атлетику при карабканье/подъёме.",
+    materials: { "Кожа/Текстиль": 10, "Металл": 5 },
+  },
+  {
+    id: "grapple_bracelet",
+    name: "Браслет с крюком-кошкой",
+    category: "Одежда / Перчатки и наручи",
+    difficulty: "Обычная",
+    reqInt: 14,
+    text: "Браслет с пружинным механизмом выстрела крюка с верёвкой. Можно совершить дальнобойную атаку и выстрелить до 60 фт, чтобы протянуть и закрепить верёвку от своего места до выбранной позиции.",
+    materials: { "Кожа/Текстиль": 15, "Металл": 20, "Древесина": 10 },
+  },
+
+  // Обувь
   {
     id: "silent_soles",
     name: "Глушители для подошв",
     category: "Одежда / Обувь",
     difficulty: "Простая",
     reqInt: 12,
-    text: "+1 к Скрытности при перемещении по твёрдым поверхностям.",
+    text: "Подмётки с воздушной подушкой и войлоком. +1 к проверкам Скрытности при перемещении по твёрдым поверхностям.",
     materials: { "Кожа/Текстиль": 10, "Клейкие реактивы": 5 },
   },
+  {
+    id: "spring_plates",
+    name: "Пружинные накладки",
+    category: "Одежда / Обувь",
+    difficulty: "Простая",
+    reqInt: 12,
+    text: "Накладки с пружинным механизмом. Увеличивают высоту и дальность прыжка в 3 раза.",
+    materials: { "Кожа/Текстиль": 5, "Металл": 5, "Клейкие реактивы": 5 },
+  },
 
-  // Одежда / Спина
+  // Спина
   {
     id: "folding_umbrella_pack",
     name: "Накладка с раскладным зонтом",
     category: "Одежда / Спина",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Тубус на рюкзак с раскладным зонтом. Надёжно защищает от дождя и ветра.",
+    text: "Тубус на рюкзак/ранец с раскладным зонтом. Надёжно защищает от дождя и ветра.",
     materials: { "Древесина": 5, "Металл": 5, "Кожа/Текстиль": 5 },
   },
   {
@@ -338,19 +382,23 @@ const CATALOG = [
     category: "Одежда / Спина",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Действием расправляется и замедляет падение на 3 раунда: нет урона от падения, приземление на ноги. Повторно — после короткого или длинного отдыха.",
+    text: "Действием расправляется и замедляет падение на 3 раунда: нет урона от падения, можно приземлиться на ноги. Нельзя повторно до следующего короткого или длинного отдыха.",
     materials: { "Кожа/Текстиль": 40, "Металл": 10 },
   },
 
-  // Устройства / Бомбы
+  // =========================
+  // УСТРОЙСТВА
+  // =========================
+
+  // Бомбы
   {
-    id: "smoke_bomb",
-    name: "Дымовая бомба",
+    id: "flash_bomb",
+    name: "Светошумовая бомба",
     category: "Устройства / Бомбы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Сфера густого дыма 15 фт на 2 раунда (сильно заслонённая местность).",
-    materials: { "Металл": 2, "Стекло": 3, "Взрывные реактивы": 5, "Дымовые реактивы": 5 },
+    text: "Вспышка и громкий звук при разрыве. Существа в радиусе 15 фт: спасбросок Телосложения СЛ 12, иначе напуганы на 1 раунд.",
+    materials: { "Металл": 2, "Стекло": 3, "Взрывные реактивы": 5, "Световые реактивы": 5 },
   },
   {
     id: "fragment_bomb",
@@ -358,17 +406,17 @@ const CATALOG = [
     category: "Устройства / Бомбы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Радиус 10 фт, СЛ 12 Ловк, при провале 1к6 огонь + 1к6 колющий.",
+    text: "Взрыв с шрапнелью. Радиус 10 фт: спасбросок Ловкости СЛ 12, иначе 1к6 урона огнём и 1к6 колющего урона.",
     materials: { "Металл": 5, "Стекло": 3, "Взрывные реактивы": 10 },
   },
   {
-    id: "flash_bomb",
-    name: "Светошумовая бомба",
+    id: "smoke_bomb",
+    name: "Дымовая бомба",
     category: "Устройства / Бомбы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Радиус 15 фт, СЛ 12 Тел, при провале испуг на 1 раунд.",
-    materials: { "Металл": 2, "Стекло": 3, "Взрывные реактивы": 5, "Световые реактивы": 5 },
+    text: "Создаёт сферу густого дыма радиусом 15 фт на 2 раунда (или пока ветер не рассеет). Пространство — сильно заслонённая местность.",
+    materials: { "Металл": 2, "Стекло": 3, "Взрывные реактивы": 5, "Дымовые реактивы": 5 },
   },
 
   // Ловушки
@@ -378,18 +426,18 @@ const CATALOG = [
     category: "Устройства / Ловушки",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Ловушка-растяжка: при активации наносит 2к6 урона кислотой.",
+    text: "Ловушка активируется, когда существо попадает в её пространство. Наносит 2к6 урона кислотой.",
     materials: { "Стекло": 3, "Металл": 2, "Кислотные реактивы": 5 },
   },
 
-  // Устройства / Механизмы
+  // Устройства и механизмы
   {
     id: "folding_ladder",
     name: "Стремянка",
     category: "Устройства / Механизмы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Складная лестница 20 фт, складывается до размеров посоха. Установка — действие.",
+    text: "Деревянная лестница 20 фт, складывается до размеров посоха. Для установки требуется действие.",
     materials: { "Древесина": 10, "Металл": 5 },
   },
   {
@@ -407,7 +455,7 @@ const CATALOG = [
     category: "Устройства / Механизмы",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Заводное устройство для определения точного времени суток. Аксессуар.",
+    text: "Заводное устройство, позволяющее определять точное время суток. Красивый аксессуар.",
     materials: { "Кожа/Текстиль": 5, "Стекло": 10, "Металл": 20, "Кварц": 1 },
   },
 
@@ -418,7 +466,7 @@ const CATALOG = [
     category: "Конструкты",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Заводной механизм на пружине. Двигается случайно со скоростью 15 фт. Переносит груз до 0,5 фунта.",
+    text: "Маленький заводной механизм на пружине. Передвигается по случайной траектории со скоростью 15 фт. Переносит груз до 0,5 фунта.",
     materials: { "Кожа/Текстиль": 5, "Металл": 10 },
   },
   {
@@ -427,18 +475,22 @@ const CATALOG = [
     category: "Конструкты",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Летательный аппарат на ветру, управление с земли стропой до 300 фт. Поднимает груз до 2 фунтов. Летает по направлению ветра.",
+    text: "Аппарат поднимается ветром и управляется с земли стропой до 300 фт. Поднимает груз до 2 фунтов. Летает только по направлению ветра.",
     materials: { "Кожа/Текстиль": 10, "Металл": 2, "Древесина": 3 },
   },
 
-  // Оружие / Дальнобойное
+  // =========================
+  // ОРУЖИЕ
+  // =========================
+
+  // Дальнобойное оружие
   {
     id: "blunder_popper",
     name: "Пугач",
     category: "Оружие / Дальнобойное",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Огнестрельное одноручное (15/30). Однозарядное, разрушается после применения. Урон 1к8 колющий.",
+    text: "Огнестрельное одноручное (дис. 15/30). Примитивное однозарядное, разрушается после применения. Наносит 1к8 колющего урона.",
     materials: { "Древесина": 5, "Взрывные реактивы": 5, "Металл": 5 },
   },
   {
@@ -447,7 +499,7 @@ const CATALOG = [
     category: "Оружие / Дальнобойное",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Огнестрельное одноручное (30/90), 1к10 колющий, 1 гнездо улучшений.",
+    text: "Огнестрельное одноручное, боекомплект (1) (дис. 30/90). Урон 1к10 колющий. Имеет 1 гнездо для улучшений. Использует пули.",
     materials: { "Металл": 90, "Древесина": 15, "Взрывные реактивы": 35, "Кожа/Текстиль": 10, "Кремень": 1 },
   },
   {
@@ -456,7 +508,7 @@ const CATALOG = [
     category: "Оружие / Дальнобойное",
     difficulty: "Сложная",
     reqInt: 16,
-    text: "Огнестрельное двуручное (40/120), 1к12 колющий, 3 гнезда улучшений.",
+    text: "Огнестрельное двуручное, боекомплект (1) (дис. 40/120). Урон 1к12 колющий. Имеет 3 гнезда для улучшений. Использует пули.",
     materials: { "Металл": 180, "Древесина": 30, "Взрывные реактивы": 70, "Кожа/Текстиль": 20, "Кремень": 1 },
   },
   {
@@ -465,7 +517,7 @@ const CATALOG = [
     category: "Оружие / Дальнобойное",
     difficulty: "Замысловатая",
     reqInt: 18,
-    text: "Экзотическое двуручное, боекомплект (5). Действием: конус 15 фт, СЛ 15 Ловк, 5к6 огонь (половина при успехе). После использования: к20, если 8 или меньше — выходит из строя; владелец получает 2к4 огонь и нельзя использовать до долгого отдыха.",
+    text: "Экзотическое двуручное, боекомплект (5). Действием: конус 15 фт, спасбросок Ловкости СЛ 15, 5к6 урона огнём (половина при успехе). После каждого использования: к20, если результат 8 или меньше — выходит из строя: владелец получает 2к4 урона огнём и не может использовать до окончания продолжительного отдыха.",
     materials: { "Металл": 200, "Горючие реактивы": 250, "Стекло": 20, "Кожа/Текстиль": 30 },
   },
 
@@ -476,7 +528,7 @@ const CATALOG = [
     category: "Оружие / Боеприпасы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Набор маячков на 20 стрел/болтов. Сияние видно до 1000 фт. Если ранено — атаки по цели игнорируют эффекты темноты/тумана как заслонённой местности. +2 к вероятности найти отстрелянные боеприпасы.",
+    text: "Набор маячков на 20 стрел/болтов, сияние видно до 1000 фт. Если цель ранена этим боеприпасом — атаки по ней игнорируют эффекты заслонённой местности от темноты/тумана. Повышает шанс найти отстрелянные боеприпасы на +2.",
     materials: { "Самоцветы": 10, "Световые реактивы": 5, "Клейкие реактивы": 5 },
   },
   {
@@ -485,7 +537,7 @@ const CATALOG = [
     category: "Оружие / Боеприпасы",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Набор из 5 пуль для огнестрельного оружия. Уничтожаются после выстрела.",
+    text: "Набор из 5 пуль. Уничтожаются после выстрела.",
     materials: { "Металл": 5 },
   },
   {
@@ -494,7 +546,7 @@ const CATALOG = [
     category: "Оружие / Боеприпасы",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Набор из 5 резервуаров горючего для огнемёта. Уничтожаются после выстрела.",
+    text: "Набор из 5 резервуаров с горючим для огнемёта. Уничтожаются после выстрела.",
     materials: { "Стекло": 10, "Горючие реактивы": 40 },
   },
 
@@ -505,7 +557,7 @@ const CATALOG = [
     category: "Оружие / Особое",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Древковое оружие с досягаемостью 10 фт и петлёй. Действием Атака можно попытаться опутать конечность противника, удерживая его на расстоянии.",
+    text: "Древковое оружие с досягаемостью 10 фт и петлёй. Действием атаки можно попытаться опутать конечность противника, удерживая его на расстоянии.",
     materials: { "Древесина": 10, "Кожа/Текстиль": 5 },
   },
   {
@@ -514,7 +566,7 @@ const CATALOG = [
     category: "Оружие / Особое",
     difficulty: "Простая",
     reqInt: 12,
-    text: "Двуручная клюшка с сеткой. Дальность импровизированной дальнобойной атаки 40/80. Реакцией можно попытаться поймать маленький снаряд/брошенный предмет, снижая урон на 1к4.",
+    text: "Двуручная клюшка с рукояткой и сеткой. Дальность дальнобойной атаки импровизированным оружием становится 40/80. Реакцией можно попытаться поймать маленький снаряд или брошенный предмет, снижая получаемый урон на 1к4.",
     materials: { "Древесина": 8, "Металл": 3, "Кожа/Текстиль": 4 },
   },
   {
@@ -523,18 +575,18 @@ const CATALOG = [
     category: "Оружие / Особое",
     difficulty: "Сложная",
     reqInt: 16,
-    text: "Устройство на запястье. Метает предметы до 5 фунтов. Дальность импровизированной дальнобойной атаки 100/160.",
+    text: "Устройство на запястье, позволяющее метать предметы весом до 5 фунтов. Дальность дальнобойной атаки импровизированным оружием становится 100/160.",
     materials: { "Древесина": 50, "Металл": 65, "Кожа/Текстиль": 35 },
   },
 
-  // Улучшения: дальний бой
+  // Улучшения для дальнобойного оружия
   {
     id: "bayonet_blade",
     name: "Примыкаемый клинок",
     category: "Оружие / Улучшения (дальний бой)",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Лёгкое рукопашное оружие на конец ствола. Позволяет использовать стрелковое оружие как оружие ближнего боя.",
+    text: "Лёгкое рукопашное оружие, установленное на конец ствола. Позволяет использовать стрелковое оружие как оружие ближнего боя.",
     materials: { "Металл": 30, "Кожа/Текстиль": 10, "Древесина": 10 },
   },
   {
@@ -543,7 +595,7 @@ const CATALOG = [
     category: "Оружие / Улучшения (дальний бой)",
     difficulty: "Сложная",
     reqInt: 16,
-    text: "Увеличивает дальность до 80/320. Активация руны: подсветка теплокровных силуэтов на 10 минут. 1 раз за долгий отдых.",
+    text: "Увеличивает дальность оружия до 80/320 фт. Если активировать руну и посмотреть в окуляр — силуэты теплокровных существ подсвечиваются на 10 минут. 1 раз за долгий отдых.",
     materials: { "Металл": 50, "Стекло": 50, "Самоцветы": 150 },
   },
   {
@@ -552,7 +604,7 @@ const CATALOG = [
     category: "Оружие / Улучшения (дальний бой)",
     difficulty: "Сложная",
     reqInt: 16,
-    text: "Тонкий красный луч указывает направление дула. Атаки оружием получают +2 к попаданию.",
+    text: "Тонкий красный луч указывает направление. Атаки оружием получают +2 к попаданию.",
     materials: { "Металл": 50, "Стекло": 50, "Световые реактивы": 100, "Самоцветы": 50 },
   },
   {
@@ -561,11 +613,11 @@ const CATALOG = [
     category: "Оружие / Улучшения (дальний бой)",
     difficulty: "Замысловатая",
     reqInt: 18,
-    text: "Атаки оружием больше не издают громкого звука. Есть дополнительный эффект скрытности (как в описании правила).",
+    text: "Атаки оружием больше не издают громкого звука. Если атака совершается из Скрытности, и в 20 фт нет вражеских существ, атакующий может уйти в Скрытность частью атакующего действия.",
     materials: { "Мифрил": 350, "Металл": 80, "Кожа/Текстиль": 40, "Охлаждающие реактивы": 30 },
   },
 
-  // Улучшения: ближний бой
+  // Улучшения для оружия ближнего боя
   {
     id: "weapon_lanyard",
     name: "Цепная петля для оружия",
@@ -581,7 +633,7 @@ const CATALOG = [
     category: "Оружие / Улучшения (ближний бой)",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Увеличивает дальность поражения оружия на 5 фт. Если при броске атаки выпадает 1 — удлинитель разрушается.",
+    text: "Устройство увеличивает досягаемость оружия на 5 фт. Если при броске атаки выпадает '1' — удлинитель разрушается.",
     materials: { "Металл": 35, "Кожа/Текстиль": 5, "Клейкие реактивы": 10 },
   },
   {
@@ -590,56 +642,63 @@ const CATALOG = [
     category: "Оружие / Улучшения (ближний бой)",
     difficulty: "Обычная",
     reqInt: 14,
-    text: "Улучшение для клинкового оружия со свойством Лёгкое: крепится к наручу. Бонусным действием втягивается/выдвигается. Пока выдвинут — считается оружием в руке, этой рукой нельзя делать другие действия.",
+    text: "Крепится к наручу для клинкового оружия со свойством Лёгкое. Бонусным действием втягивается/выдвигается. Пока выдвинут — считается оружием в руке, и этой рукой нельзя делать другие действия.",
     materials: { "Металл": 30, "Кожа/Текстиль": 20 },
   },
 ];
 
+
 /** =========================
- *  СОСТОЯНИЕ + ХРАНЕНИЕ
+ *  STORAGE + MIGRATION
  *  ========================= */
-const STORE_KEY = "dnd_engineer_tracker_v3";
+const STORE_KEY = "dnd_engineer_tracker_v3"; // держим стабильным
+const MIGRATION_KEYS = ["dnd_engineer_tracker_v4","dnd_engineer_tracker_v3","dnd_engineer_tracker_v2","dnd_engineer_tracker_v1"];
 
-function loadState(){
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-function saveState(){
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+function safeParse(raw){
+  try { return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
 
-const state = loadState() ?? {
+function loadStateWithMigration(){
+  const current = safeParse(localStorage.getItem(STORE_KEY));
+  if (current) return current;
+
+  // если текущий ключ пуст, пробуем найти старый
+  for (const k of MIGRATION_KEYS){
+    const s = safeParse(localStorage.getItem(k));
+    if (s && typeof s === "object") return s;
+  }
+  return null;
+}
+
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+/** =========================
+ *  STATE
+ *  ========================= */
+const state = loadStateWithMigration() ?? {
   intScore: 14,
   toolBonus: 3,
   mode: "blueprint", // blueprint | prototype
   inventory: structuredClone(DEFAULT_INVENTORY),
   log: [],
-  customCatalog: [], // пользовательские чертежи
+  customCatalog: [],
 };
 
 if (!Array.isArray(state.customCatalog)) state.customCatalog = [];
 if (!state.inventory || typeof state.inventory !== "object") state.inventory = structuredClone(DEFAULT_INVENTORY);
+if (!Array.isArray(state.log)) state.log = [];
+if (state.mode !== "blueprint" && state.mode !== "prototype") state.mode = "blueprint";
 
 /** =========================
- *  Общий каталог
+ *  CATALOG HELPERS
  *  ========================= */
-function getFullCatalog(){
-  return [...CATALOG, ...(state.customCatalog || [])];
-}
-function isBuiltin(id){
-  return CATALOG.some(x => x.id === id);
-}
-function isCustomItem(id){
-  return (state.customCatalog || []).some(x => x.id === id);
-}
-function findItemById(id){
-  return getFullCatalog().find(x => x.id === id) ?? null;
-}
+function getFullCatalog(){ return [...CATALOG, ...(state.customCatalog || [])]; }
+function isBuiltin(id){ return CATALOG.some(x => x.id === id); }
+function isCustomItem(id){ return (state.customCatalog || []).some(x => x.id === id); }
+function findItemById(id){ return getFullCatalog().find(x => x.id === id) ?? null; }
 
 /** =========================
- *  UI refs
+ *  UI REFS
  *  ========================= */
 const elInt = document.getElementById("intScore");
 const elTool = document.getElementById("toolBonus");
@@ -661,9 +720,6 @@ const btnAddMat = document.getElementById("addMaterialBtn");
 const btnClearLog = document.getElementById("clearLogBtn");
 const btnAddBlueprint = document.getElementById("addBlueprintBtn");
 
-/** =========================
- *  MODAL refs
- *  ========================= */
 const modalBackdrop = document.getElementById("modalBackdrop");
 const itemModal = document.getElementById("itemModal");
 const modalTitle = document.getElementById("modalTitle");
@@ -683,8 +739,13 @@ const clearMatRowsBtn = document.getElementById("clearMatRowsBtn");
 const saveItemBtn = document.getElementById("saveItemBtn");
 const deleteDraftBtn = document.getElementById("deleteDraftBtn");
 
+const btnImportCatalog = document.getElementById("importCatalogBtn");
+const elCatalogText = document.getElementById("catalogText");
+const elImportCatalogResult = document.getElementById("importCatalogResult");
+
+
 /** =========================
- *  ИНИЦИАЛИЗАЦИЯ
+ *  INIT
  *  ========================= */
 elInt.value = state.intScore;
 elTool.value = state.toolBonus;
@@ -695,6 +756,7 @@ initCategoryOptions();
 renderInventory();
 renderItems();
 renderLog();
+saveState(); // после миграции сохраняем в стабильный ключ
 
 elInt.addEventListener("input", () => { state.intScore = clampInt(elInt.value, 1, 30); saveState(); renderItems(); });
 elTool.addEventListener("input", () => { state.toolBonus = parseInt(elTool.value || "0", 10); saveState(); });
@@ -704,8 +766,7 @@ elMode.addEventListener("change", () => { state.mode = elMode.value; saveState()
 
 btnExport.addEventListener("click", () => {
   elIO.value = JSON.stringify(state, null, 2);
-  elIO.focus();
-  elIO.select();
+  elIO.focus(); elIO.select();
 });
 
 btnImport.addEventListener("click", () => {
@@ -722,6 +783,7 @@ btnImport.addEventListener("click", () => {
 
     if (!Array.isArray(state.customCatalog)) state.customCatalog = [];
     if (!state.inventory || typeof state.inventory !== "object") state.inventory = structuredClone(DEFAULT_INVENTORY);
+    if (!Array.isArray(state.log)) state.log = [];
 
     ensureInventoryForAllCatalogMaterials();
     saveState();
@@ -743,7 +805,8 @@ btnImport.addEventListener("click", () => {
 btnReset.addEventListener("click", () => {
   const ok = confirm("Сбросить всё? Инвентарь, пользовательский каталог и историю крафта.");
   if (!ok) return;
-  localStorage.removeItem(STORE_KEY);
+  // удаляем все известные ключи
+  for (const k of new Set([STORE_KEY, ...MIGRATION_KEYS])) localStorage.removeItem(k);
   location.reload();
 });
 
@@ -767,17 +830,12 @@ btnClearLog.addEventListener("click", () => {
 });
 
 /** =========================
- *  МОДАЛКА: добавить/редактировать
+ *  MODAL
  *  ========================= */
 let modalContext = null;
-// {
-//   editId: string|null,   // если редактируем существующий пользовательский чертёж
-//   preset: object|null,   // если открыто как "копия встроенного" (или другой пресет)
-//   presetSource: "builtin_copy" | null
-// }
+// { editId: string|null, preset: object|null, presetSource: "builtin_copy"|null }
 
 btnAddBlueprint.addEventListener("click", () => openItemModal({ editId: null, preset: null, presetSource: null }));
-
 modalBackdrop.addEventListener("click", closeItemModal);
 closeModalBtn.addEventListener("click", closeItemModal);
 
@@ -792,7 +850,7 @@ mDifficulty.addEventListener("change", () => {
 saveItemBtn.addEventListener("click", () => {
   if (!modalContext) return;
 
-  const name = (mName.value || "").trim();
+  let name = (mName.value || "").trim();
   const category = (mCategory.value || "").trim();
   const difficulty = mDifficulty.value;
   const reqInt = clampInt(mReqInt.value, 1, 30);
@@ -803,22 +861,26 @@ saveItemBtn.addEventListener("click", () => {
   if (!category) { alert("Категория обязательна."); return; }
   if (!Object.keys(materials).length) { alert("Добавь хотя бы один материал с количеством > 0."); return; }
 
+  // Функционал 1: автосуффикс “(Прототип)” при сохранении копии встроенного
+  if (!modalContext.editId && modalContext.presetSource === "builtin_copy") {
+    if (!/прототип/i.test(name)) {
+      name = `${name} (Прототип)`;
+      mName.value = name;
+    }
+  }
+
   ensureMaterialsExistInInventory(materials);
 
   const isEdit = !!modalContext.editId;
   const id = isEdit ? modalContext.editId : makeIdFromName(name);
 
   const item = {
-    id,
-    name,
-    category,
-    difficulty,
-    reqInt,
-    text,
-    materials,
-    // пометка нужна только для удобства: откуда копия
+    id, name, category, difficulty, reqInt, text, materials,
     copiedFrom: modalContext?.presetSource === "builtin_copy" ? (modalContext.preset?.id ?? null) : null,
   };
+
+  const savedFromBuiltinCopy = (!isEdit && modalContext?.presetSource === "builtin_copy");
+  const savedName = item.name;
 
   if (isEdit){
     if (!isCustomItem(id)) {
@@ -828,6 +890,14 @@ saveItemBtn.addEventListener("click", () => {
     state.customCatalog = state.customCatalog.map(x => x.id === id ? item : x);
   } else {
     state.customCatalog.push(item);
+
+    // Функционал 2: автопоказ нового прототипа
+    if (savedFromBuiltinCopy) {
+      elQ.value = savedName;
+      elCat.value = "all";
+      elDiff.value = "all";
+      elOnly.value = "all";
+    }
   }
 
   ensureInventoryForAllCatalogMaterials();
@@ -836,6 +906,11 @@ saveItemBtn.addEventListener("click", () => {
   renderInventory();
   renderItems();
   closeItemModal();
+
+  // Функционал 2: автопрокрутка
+  if (savedFromBuiltinCopy) {
+    document.getElementById("items").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 });
 
 deleteDraftBtn.addEventListener("click", () => {
@@ -868,6 +943,7 @@ function openItemModal({ editId = null, preset = null, presetSource = null }){
   mCategory.value = item?.category ?? "";
   mDifficulty.value = item?.difficulty ?? "Простая";
   mText.value = item?.text ?? "";
+
   const defaultInt = DIFFICULTY_TO_INT[mDifficulty.value] ?? 12;
   mReqInt.value = (item?.reqInt ?? defaultInt);
 
@@ -880,7 +956,6 @@ function openItemModal({ editId = null, preset = null, presetSource = null }){
     addMatRow("", 0);
   }
 
-  // Удаление доступно только при редактировании пользовательского предмета
   deleteDraftBtn.style.display = (isEdit && isCustomItem(editId)) ? "inline-flex" : "none";
 
   modalBackdrop.style.display = "block";
@@ -934,6 +1009,9 @@ function collectMaterialsFromModal(){
   return out;
 }
 
+/** =========================
+ *  INVENTORY SYNC
+ *  ========================= */
 function ensureMaterialsExistInInventory(materials){
   for (const k of Object.keys(materials)){
     if (!(k in state.inventory)) state.inventory[k] = 0;
@@ -945,17 +1023,8 @@ function ensureInventoryForAllCatalogMaterials(){
   }
 }
 
-function makeIdFromName(name){
-  return name.toLowerCase()
-    .replaceAll("ё","е")
-    .replace(/[^a-z0-9а-я\s_-]/gi, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .slice(0, 40) + "_" + Math.random().toString(16).slice(2, 6);
-}
-
 /** =========================
- *  РЕНДЕР: ИНВЕНТАРЬ
+ *  RENDER INVENTORY
  *  ========================= */
 function renderInventory(){
   elInventory.innerHTML = "";
@@ -988,7 +1057,7 @@ function renderInventory(){
 }
 
 /** =========================
- *  РЕНДЕР: КАТЕГОРИИ
+ *  CATEGORY OPTIONS
  *  ========================= */
 function initCategoryOptions(){
   const cats = Array.from(new Set(getFullCatalog().map(x => x.category)))
@@ -998,7 +1067,7 @@ function initCategoryOptions(){
 }
 
 /** =========================
- *  РЕНДЕР: СПИСОК ПРЕДМЕТОВ
+ *  RENDER ITEMS
  *  ========================= */
 function renderItems(){
   const q = (elQ.value || "").trim().toLowerCase();
@@ -1056,7 +1125,6 @@ function renderItems(){
     const nameWrap = document.createElement("div");
     nameWrap.className = "itemName";
 
-    // Редактирование/удаление: только пользовательские чертежи
     if (custom){
       const link = document.createElement("button");
       link.className = "link";
@@ -1105,23 +1173,17 @@ function renderItems(){
     const btn = document.createElement("button");
     btn.className = "primary";
 
-    // Главное требование:
-    // Если выбран режим "Новый прототип", то вместо "Скрафтить" показываем "Скрафтить прототип"
-    // и для ВСТРОЕННЫХ предметов это делает: "Скопировать встроенный предмет в пользовательский и отредактировать".
     if (state.mode === "prototype") {
       btn.textContent = "Скрафтить прототип";
 
       if (builtin) {
-        // В режиме прототипа на встроенных чертежах — НЕ списываем ресурсы, а делаем копию + редактирование
-        btn.disabled = !okInt; // ресурсы тут не блокируют, потому что смета может измениться при редактировании
+        btn.disabled = !okInt; // ресурсы не проверяем: смета может измениться в модалке
         btn.addEventListener("click", () => copyBuiltinAndEdit(item));
       } else {
-        // Пользовательские чертежи в режиме прототипа реально крафтятся по текущей смете (x2)
         btn.disabled = !(okInt && okRes);
         btn.addEventListener("click", () => craft(item, costs, reqInt));
       }
     } else {
-      // Обычный режим: крафт как раньше
       btn.textContent = okInt && okRes ? "Скрафтить" : "Недоступно";
       btn.disabled = !(okInt && okRes);
       btn.addEventListener("click", () => craft(item, costs, reqInt));
@@ -1152,10 +1214,9 @@ function renderItems(){
 }
 
 /** =========================
- *  КОПИРОВАНИЕ ВСТРОЕННОГО В ПОЛЬЗОВАТЕЛЬСКИЙ + РЕДАКТ
+ *  PROTOTYPE COPY (builtin -> modal)
  *  ========================= */
 function copyBuiltinAndEdit(builtinItem){
-  // Создаём пресет для модалки, но НЕ добавляем в каталог до нажатия “Сохранить”
   const preset = {
     id: builtinItem.id,
     name: builtinItem.name,
@@ -1169,7 +1230,7 @@ function copyBuiltinAndEdit(builtinItem){
 }
 
 /** =========================
- *  КРАФТ
+ *  CRAFT + LOG
  *  ========================= */
 function craft(item, costs, reqInt){
   for (const [mat, amt] of Object.entries(costs)){
@@ -1194,9 +1255,6 @@ function craft(item, costs, reqInt){
   renderLog();
 }
 
-/** =========================
- *  РЕНДЕР: ИСТОРИЯ
- *  ========================= */
 function renderLog(){
   elLog.innerHTML = "";
   if (!state.log.length){
@@ -1204,7 +1262,7 @@ function renderLog(){
     return;
   }
 
-  for (const entry of state.log.slice(0, 40)){
+  for (const entry of state.log.slice(0, 60)){
     const div = document.createElement("div");
     div.className = "logEntry";
 
@@ -1229,7 +1287,7 @@ function renderLog(){
 }
 
 /** =========================
- *  УТИЛИТЫ
+ *  UTILS
  *  ========================= */
 function hasEnough(costs){
   for (const [mat, amt] of Object.entries(costs)){
@@ -1239,12 +1297,39 @@ function hasEnough(costs){
   return true;
 }
 
+function normalizeMaterialKey(raw){
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const low = s.toLowerCase();
+
+  // Кожа/текстиль — все варианты к одному ключу
+  if (
+    low === "кожа и текстиль" ||
+    low === "кожа/текстиль" ||
+    low === "кожа/текстиль " ||
+    low === "кожа" ||
+    low === "кожа/текстиль."
+  ) return "Кожа/Текстиль";
+
+  // Реактивы: единственное/множественное
+  if (low === "световой реактив" || low === "световые реактивы") return "Световые реактивы";
+  if (low === "клейкий реактив" || low === "клейкие реактивы") return "Клейкие реактивы";
+
+  // Капитализация особых материалов
+  if (low === "кварц") return "Кварц";
+  if (low === "кремень") return "Кремень";
+  if (low === "мифрил") return "Мифрил";
+
+  return s.replace(/\s+/g, " ").trim();
+}
+
+
 function scaledMaterials(materials, mult){
   const out = {};
   for (const [mat, amt] of Object.entries(materials)){
     const n = Math.round((parseInt(amt || "0", 10) || 0) * mult);
     if (n > 0) out[mat] = n;
-    if (!(mat in state.inventory)) state.inventory[mat] = 0; // автодобавление редких материалов
+    if (!(mat in state.inventory)) state.inventory[mat] = 0;
   }
   return out;
 }
@@ -1255,8 +1340,278 @@ function clampInt(v, a, b){
   return Math.max(a, Math.min(b, n));
 }
 
+function makeIdFromName(name){
+  return name.toLowerCase()
+    .replaceAll("ё","е")
+    .replace(/[^a-z0-9а-я\s_-]/gi, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 40) + "_" + Math.random().toString(16).slice(2, 6);
+}
+
 function escapeHtml(s){
-  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+btnImportCatalog?.addEventListener("click", () => {
+  const raw = (elCatalogText.value || "").trim();
+  if (!raw) { alert("Вставь текст каталога."); return; }
+
+  const { items, warnings } = parseCatalogFromText(raw);
+
+  if (!items.length) {
+    elImportCatalogResult.textContent = "Ничего не распознано. Проверь формат текста.";
+    return;
+  }
+
+  // Добавляем/обновляем ТОЛЬКО в customCatalog
+  let added = 0;
+  let updated = 0;
+
+  for (const it of items) {
+    ensureMaterialsExistInInventory(it.materials);
+
+    const idx = state.customCatalog.findIndex(x =>
+      (x.name || "").trim().toLowerCase() === it.name.trim().toLowerCase()
+    );
+
+    if (idx >= 0) {
+      // обновляем существующий пользовательский
+      const keepId = state.customCatalog[idx].id;
+      state.customCatalog[idx] = { ...it, id: keepId };
+      updated++;
+    } else {
+      state.customCatalog.push(it);
+      added++;
+    }
+  }
+
+  ensureInventoryForAllCatalogMaterials();
+  saveState();
+  initCategoryOptions();
+  renderInventory();
+  renderItems();
+
+  const msg =
+    `Импорт завершён: добавлено ${added}, обновлено ${updated}.` +
+    (warnings.length ? ` Предупреждений: ${warnings.length}.` : "");
+
+  elImportCatalogResult.textContent = msg;
+
+  // Если есть предупреждения — покажем первые несколько
+  if (warnings.length) {
+    console.warn("Catalog import warnings:", warnings);
+  }
+});
+
+function parseCatalogFromText(text){
+  const lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  const warnings = [];
+
+  const isDifficultyLine = (s) => /\(\s*сложность\s*-\s*/i.test(s);
+  const extractDifficulty = (s) => {
+    const m = s.match(/\(\s*сложность\s*-\s*([^)]+)\)/i);
+    if (!m) return null;
+    const dRaw = m[1].trim().toLowerCase();
+    if (dRaw.startsWith("легк")) return "Простая";   // "Легкая"
+    if (dRaw.startsWith("прост")) return "Простая";
+    if (dRaw.startsWith("обыч")) return "Обычная";
+    if (dRaw.startsWith("сложн")) return "Сложная";
+    if (dRaw.startsWith("замысл")) return "Замысловатая";
+    if (dRaw.startsWith("гениал")) return "Гениальная";
+    return null;
+  };
+
+  const isMaterialsLine = (s) => /^материалы\s*:/i.test(s);
+
+  // Заголовки категорий
+  const TOP = new Set(["одежда", "устройства", "оружие"]);
+  const skipHeadings = new Set([
+    "категории устройств",
+    "головные уборы",
+    "перчатки и наручи",
+    "обувь",
+    "спина",
+    "бомбы",
+    "ловушки",
+    "устройства и механизмы",
+    "конструкты",
+    "дальнобойное оружие",
+    "боеприпасы",
+    "особое оружие",
+    "улучшения для дальнобойного оружия",
+    "улучшения для оружия ближнего боя",
+    "большие проекты",
+  ]);
+
+  let topCat = "";
+  let subCat = "";
+
+  function setCategoryFromLine(s){
+    const low = s.toLowerCase();
+
+    if (low === "категории устройств") return;
+
+    if (TOP.has(low)) {
+      topCat = capitalizeRu(low);
+      subCat = "";
+      return;
+    }
+
+    // Подкатегория — почти все твои разделы
+    // Не считаем предметом, если явно похоже на заголовок
+    if (skipHeadings.has(low)) {
+      // Но нам нужно помнить подкатегорию для построения category в предметах
+      // Логика: всё кроме "Категории устройств" и "Большие проекты"
+      if (low !== "категории устройств" && low !== "большие проекты") {
+        subCat = capitalizeRu(low);
+      }
+      return;
+    }
+
+    // Если строка похожа на “подзаголовок” (не предмет), тоже запомним как subCat.
+    // Эвристика: одно-двухсловный заголовок без цифр и без "Материалы"
+    if (!low.includes("материалы") && low.length <= 40 && !/\d/.test(low)) {
+      // Но только если уже есть topCat
+      if (topCat) subCat = s;
+    }
+  }
+
+  function buildCategory(){
+    if (topCat && subCat) {
+      // Чуть приводим некоторые подкатегории к виду, который у тебя в UI
+      const normalizedSub = normalizeSubCategory(subCat);
+      return `${topCat} / ${normalizedSub}`;
+    }
+    if (topCat) return topCat;
+    return "Без категории";
+  }
+
+  const items = [];
+  for (let i = 0; i < lines.length; i++){
+    const line = lines[i];
+
+    // Категории/подкатегории
+    if (!isDifficultyLine(line) && !isMaterialsLine(line)) {
+      // Если это потенциальный заголовок — сохраняем
+      // Важная эвристика: если следующая строка — (сложность - ...), тогда текущая строка — это имя предмета, НЕ заголовок
+      const next = lines[i + 1] || "";
+      if (!(next && isDifficultyLine(next))) {
+        setCategoryFromLine(line);
+      }
+    }
+
+    // Предмет: "Имя", затем "(сложность - ...)"
+    const next = lines[i + 1] || "";
+    if (next && isDifficultyLine(next)) {
+      const name = line.trim();
+      const difficulty = extractDifficulty(next);
+      if (!difficulty) {
+        warnings.push(`Не распознана сложность у "${name}": "${next}"`);
+      }
+
+      let j = i + 2;
+      const descLines = [];
+      let materialsLine = "";
+
+      while (j < lines.length){
+        const s = lines[j];
+        if (isMaterialsLine(s)) { materialsLine = s; break; }
+
+        // Если внезапно начался следующий предмет (имя + сложность)
+        const sNext = lines[j + 1] || "";
+        if (sNext && isDifficultyLine(sNext)) break;
+
+        // Пропускаем повторные заголовки внутри описания (редко, но бывает)
+        if (!skipHeadings.has(s.toLowerCase()) && s.toLowerCase() !== "категории устройств") {
+          descLines.push(s);
+        }
+        j++;
+      }
+
+      if (!materialsLine) {
+        warnings.push(`Не найдена строка материалов у "${name}".`);
+      }
+
+      const materials = parseMaterialsLine(materialsLine, warnings);
+      const category = buildCategory();
+      const reqInt = DIFFICULTY_TO_INT[difficulty || "Простая"] ?? 12;
+
+      items.push({
+        id: makeIdFromName(name),
+        name,
+        category,
+        difficulty: difficulty || "Простая",
+        reqInt,
+        text: descLines.join(" "),
+        materials,
+      });
+
+      // прыгаем дальше
+      i = j; // продолжим с материалов/или с того места, где остановились
+    }
+  }
+
+  return { items, warnings };
+}
+
+function parseMaterialsLine(line, warnings){
+  const out = {};
+  if (!line) return out;
+
+  // "Материалы: Металл 4зм, Стекло 6зм, ... , Кварц"
+  const payload = line.replace(/^материалы\s*:\s*/i, "").trim();
+  if (!payload) return out;
+
+  const parts = payload.split(",").map(s => s.trim()).filter(Boolean);
+
+  for (const p0 of parts){
+    let p = p0.replace(/\.$/, "").trim();
+
+    // Частный случай: "Кварц" / "Кремень" без числа
+    const mNum = p.match(/^(.+?)\s+(\d+)\s*з/i);
+    if (mNum) {
+      const key = normalizeMaterialKey(mNum[1]);
+      const amt = parseInt(mNum[2], 10);
+      if (key && amt > 0) out[key] = (out[key] ?? 0) + amt;
+      continue;
+    }
+
+    // "Кварц" без числа — считаем как 1
+    const key2 = normalizeMaterialKey(p.replace(/\s*злт\s*$/i,"").replace(/\s*зм\s*$/i,"").trim());
+    if (key2) {
+      out[key2] = (out[key2] ?? 0) + 1;
+    } else {
+      warnings.push(`Не удалось распарсить материал: "${p0}"`);
+    }
+  }
+
+  return out;
+}
+
+function normalizeSubCategory(s){
+  const low = s.toLowerCase();
+
+  // Чтобы совпадало с тем, что ты хочешь видеть в фильтрах
+  if (low === "устройства и механизмы") return "Механизмы";
+  if (low === "дальнобойное оружие") return "Дальнобойное";
+  if (low === "улучшения для дальнобойного оружия") return "Улучшения (дальний бой)";
+  if (low === "улучшения для оружия ближнего боя") return "Улучшения (ближний бой)";
+
+  return s;
+}
+
+function capitalizeRu(s){
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 </script>
 </body>
