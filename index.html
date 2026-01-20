@@ -10,42 +10,26 @@
     header { padding: 16px 18px; border-bottom: 1px solid #1b2635; position: sticky; top: 0; background: #0b0f14; z-index: 10; }
     h1 { margin: 0 0 6px; font-size: 18px; }
     .sub { color: #9fb0c6; font-size: 13px; }
-    /* DESKTOP */
-main {
-  display: grid;
-  grid-template-columns: 420px 1fr;
-  gap: 14px;
-  align-items: start;
-}
+    main { display: grid; grid-template-columns: 360px 1fr; gap: 14px; padding: 14px; }
+   @media (max-width: 980px){
+  main { grid-template-columns: 1fr; }
 
-/* Левая колонка — список карточек */
-.leftCol {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.leftCol .card { margin-top: 0 !important; }
+  /* позволяем упорядочивать карточки внутри leftCol */
+  .leftCol { display: flex; flex-direction: column; gap: 14px; }
+  .leftCol .card { margin-top: 0 !important; }
 
-/* MOBILE */
-@media (max-width: 980px){
-  /* На мобилке делаем один столбец, но с управляемым порядком */
-  main {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  /* Мобильный порядок:
-     Параметры -> Материалы -> Устройства и крафт -> История -> Экспорт/Импорт -> Импорт каталога */
+  /* ТВОЙ НУЖНЫЙ ПОРЯДОК НА МОБИЛКЕ:
+     параметры -> устройства и крафт -> материалы -> история -> экспорт/импорт -> импорт каталога */
   #cardParams { order: 1; }
   #cardMaterials { order: 2; }
-  #cardCatalog { order: 3; }          /* это правая секция */
+  .rightCol { order: 3; }
   #cardHistory { order: 4; }
   #cardStateIO { order: 5; }
   #cardCatalogImport { order: 6; }
 }
 
- 
+
+
     .card { background: #0f1520; border: 1px solid #1b2635; border-radius: 14px; padding: 12px; overflow: hidden; }
     .card h2 { margin: 0 0 10px; font-size: 14px; color: #cfe0ff; font-weight: 650; }
 
@@ -74,27 +58,7 @@ main {
 
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid #1b2635; border-radius: 999px; font-size: 12px; color: #b9c8dc; background: #0b111a; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    
-    
-    /* MOBILE */
-@media (max-width: 980px){
-  /* На мобилке делаем один столбец, но с управляемым порядком */
-  main {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  /* Мобильный порядок:
-     Параметры -> Материалы -> Устройства и крафт -> История -> Экспорт/Импорт -> Импорт каталога */
-  #cardParams { order: 1; }
-  #cardMaterials { order: 2; }
-  #cardCatalog { order: 3; }          /* это правая секция */
-  #cardHistory { order: 4; }
-  #cardStateIO { order: 5; }
-  #cardCatalogImport { order: 6; }
-
- .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 980px){ .grid { grid-template-columns: 1fr; } }
 
     .hr { height: 1px; background: #1b2635; margin: 10px 0; }
 
@@ -126,89 +90,78 @@ main {
   <div class="sub">Локально в браузере (localStorage). Режим “Новый прототип” удваивает смету ресурсов.</div>
 </header>
 
-<main id="layoutRoot">
-  <!-- LEFT COLUMN -->
+<main>
   <section class="leftCol">
-    <!-- Параметры персонажа -->
-    <div class="card" id="cardParams">
-      <h2>Параметры персонажа</h2>
-
-      <div class="row">
-        <label for="intScore">Интеллект</label>
-        <input id="intScore" type="number" min="1" max="30" step="1" />
-      </div>
-
-      <div class="row">
-        <label for="toolBonus">Владение инструментами (бонус)</label>
-        <input id="toolBonus" type="number" step="1" />
-      </div>
-
-      <div class="row">
-        <label for="prototypeMode">Режим крафта</label>
-        <select id="prototypeMode">
-          <option value="blueprint">По чертежам (обычная цена)</option>
-          <option value="prototype">Новый прототип (цена x2)</option>
-        </select>
-      </div>
-
-      <div class="muted">
-        Проверка в игре: d20 + бонус инструментов против СЛ = требуемому Интеллекту устройства.
-        В режиме “Новый прототип” на встроенных чертежах кнопка делает копию → редактирование.
-      </div>
+  <!-- Параметры персонажа -->
+  <div class="card" id="cardParams">
+    <h2>Параметры персонажа</h2>
+    <div class="row">
+      <label for="intScore">Интеллект</label>
+      <input id="intScore" type="number" min="1" max="30" step="1" />
     </div>
-
-    <!-- Материалы -->
-    <div class="card" id="cardMaterials">
-      <h2>Запасы материалов (в зм)</h2>
-      <div id="inventory" class="invList"></div>
-
-      <div class="btnrow" style="margin-top:10px;">
-        <button id="addMaterialBtn">Добавить материал</button>
-        <button class="danger" id="resetBtn">Сбросить всё</button>
-      </div>
+    <div class="row">
+      <label for="toolBonus">Владение инструментами (бонус)</label>
+      <input id="toolBonus" type="number" step="1" />
     </div>
-
-    <!-- История -->
-    <div class="card" id="cardHistory">
-      <h2>История крафта</h2>
-      <div id="craftLog" class="log"></div>
-
-      <div class="btnrow">
-        <button id="clearLogBtn">Очистить историю</button>
-      </div>
+    <div class="row">
+      <label for="prototypeMode">Режим крафта</label>
+      <select id="prototypeMode">
+        <option value="blueprint">По чертежам (обычная цена)</option>
+        <option value="prototype">Новый прототип (цена x2)</option>
+      </select>
     </div>
-
-    <!-- Экспорт/Импорт состояния -->
-    <div class="card" id="cardStateIO">
-      <h2>Экспорт / Импорт (состояние)</h2>
-      <div class="muted">Экспортируй JSON игроку или себе. Импорт восстановит состояние.</div>
-
-      <div class="btnrow" style="margin-top:10px;">
-        <button id="exportBtn">Экспорт JSON</button>
-        <button id="importBtn">Импорт JSON</button>
-      </div>
-
-      <textarea id="ioBox" rows="7" placeholder="Здесь появится экспорт или сюда вставь импорт JSON..."></textarea>
+    <div class="muted">
+      Проверка в игре: d20 + бонус инструментов против СЛ = требуемому Интеллекту устройства.
+      В режиме “Новый прототип” на встроенных чертежах кнопка делает копию → редактирование.
     </div>
+  </div>
 
-    <!-- Импорт каталога из текста -->
-    <div class="card" id="cardCatalogImport">
-      <h2>Импорт каталога из текста</h2>
-      <div class="muted">
-        Вставь текст из wiki (как в сообщении). Импорт добавит/обновит пользовательские чертежи.
-      </div>
-
-      <div class="btnrow" style="margin-top:10px;">
-        <button id="importCatalogBtn">Импортировать каталог</button>
-      </div>
-
-      <textarea id="catalogText" rows="10" placeholder="Вставь сюда каталог из wiki..."></textarea>
-      <div class="muted" id="importCatalogResult" style="margin-top:8px;"></div>
+  <!-- Материалы -->
+  <div class="card" id="cardMaterials">
+    <h2>Запасы материалов (в зм)</h2>
+    <div id="inventory" class="invList"></div>
+    <div class="btnrow" style="margin-top:10px;">
+      <button id="addMaterialBtn">Добавить материал</button>
+      <button class="danger" id="resetBtn">Сбросить всё</button>
     </div>
-  </section>
+  </div>
 
-  <!-- RIGHT COLUMN (Каталог / Крафт) -->
-  <section class="card rightCol" id="cardCatalog">
+  <!-- История (сразу после материалов и до импортов) -->
+  <div class="card" id="cardHistory">
+    <h2>История крафта</h2>
+    <div id="craftLog" class="log"></div>
+    <div class="btnrow">
+      <button id="clearLogBtn">Очистить историю</button>
+    </div>
+  </div>
+
+  <!-- Экспорт/Импорт состояния -->
+  <div class="card" id="cardStateIO">
+    <h2>Экспорт / Импорт (состояние)</h2>
+    <div class="muted">Экспортируй JSON игроку или себе. Импорт восстановит состояние.</div>
+    <div class="btnrow" style="margin-top:10px;">
+      <button id="exportBtn">Экспорт JSON</button>
+      <button id="importBtn">Импорт JSON</button>
+    </div>
+    <textarea id="ioBox" rows="7" placeholder="Здесь появится экспорт или сюда вставь импорт JSON..."></textarea>
+  </div>
+
+  <!-- Импорт каталога -->
+  <div class="card" id="cardCatalogImport">
+    <h2>Импорт каталога из текста</h2>
+    <div class="muted">
+      Вставь текст из wiki (как в сообщении). Импорт добавит/обновит пользовательские чертежи.
+    </div>
+    <div class="btnrow" style="margin-top:10px;">
+      <button id="importCatalogBtn">Импортировать каталог</button>
+    </div>
+    <textarea id="catalogText" rows="10" placeholder="Вставь сюда каталог из wiki..."></textarea>
+    <div class="muted" id="importCatalogResult" style="margin-top:8px;"></div>
+  </div>
+</section>
+
+
+<section class="card rightCol">
     <h2>Устройства и крафт</h2>
 
     <div class="grid">
@@ -259,7 +212,6 @@ main {
     <div id="items" class="items"></div>
   </section>
 </main>
-
 
 <!-- MODAL -->
 <div id="modalBackdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1000;"></div>
@@ -1566,9 +1518,4 @@ main {
 </script>
 </body>
 </html>
-
-
-
-
-
 
