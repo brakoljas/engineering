@@ -11,14 +11,23 @@
     h1 { margin: 0 0 6px; font-size: 18px; }
     .sub { color: #9fb0c6; font-size: 13px; }
     main { display: grid; grid-template-columns: 360px 1fr; gap: 14px; padding: 14px; }
-   @media (max-width: 980px){
-  main { grid-template-columns: 1fr; }
+  @media (max-width: 980px){
+  /* ВАЖНО: на мобилке меняем grid -> flex, чтобы order работал гарантированно */
+  main { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 14px; 
+  }
 
-  /* позволяем упорядочивать карточки внутри leftCol */
-  .leftCol { display: flex; flex-direction: column; gap: 14px; }
+  /* leftCol тоже колонкой, чтобы можно было упорядочить карточки внутри */
+  .leftCol { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 14px; 
+  }
   .leftCol .card { margin-top: 0 !important; }
 
-  /* ТВОЙ НУЖНЫЙ ПОРЯДОК НА МОБИЛКЕ:
+  /* НУЖНЫЙ ПОРЯДОК НА МОБИЛКЕ:
      параметры -> устройства и крафт -> материалы -> история -> экспорт/импорт -> импорт каталога */
   #cardParams { order: 1; }
   .rightCol { order: 2; }
@@ -27,6 +36,7 @@
   #cardStateIO { order: 5; }
   #cardCatalogImport { order: 6; }
 }
+
  
     .card { background: #0f1520; border: 1px solid #1b2635; border-radius: 14px; padding: 12px; overflow: hidden; }
     .card h2 { margin: 0 0 10px; font-size: 14px; color: #cfe0ff; font-weight: 650; }
@@ -1532,6 +1542,7 @@
 </script>
 </body>
 </html>
+
 
 
 
