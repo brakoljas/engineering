@@ -14,17 +14,20 @@
    @media (max-width: 980px){
   main { grid-template-columns: 1fr; }
 
-  /* чтобы можно было менять порядок карточек внутри leftCol */
+  /* позволяем упорядочивать карточки внутри leftCol */
   .leftCol { display: flex; flex-direction: column; gap: 14px; }
   .leftCol .card { margin-top: 0 !important; }
 
-  /* мобильный порядок: каталог -> история -> материалы -> экспорт/импорт -> импорт каталога */
-  .rightCol { order: 1; }
-  #cardHistory { order: 2; }
-  #cardMaterials { order: 3; }
-  #cardStateIO { order: 4; }
-  #cardCatalogImport { order: 5; }
+  /* ТВОЙ НУЖНЫЙ ПОРЯДОК НА МОБИЛКЕ:
+     параметры -> устройства и крафт -> материалы -> история -> экспорт/импорт -> импорт каталога */
+  #cardParams { order: 1; }
+  #cardMaterials { order: 2; }
+  .rightCol { order: 3; }
+  #cardHistory { order: 4; }
+  #cardStateIO { order: 5; }
+  #cardCatalogImport { order: 6; }
 }
+
 
 
     .card { background: #0f1520; border: 1px solid #1b2635; border-radius: 14px; padding: 12px; overflow: hidden; }
@@ -1515,4 +1518,5 @@
 </script>
 </body>
 </html>
+
 
